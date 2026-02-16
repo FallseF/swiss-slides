@@ -24,16 +24,29 @@ reveal.js 5.1.0（CDN）を使った、単一の自己完結HTMLファイルと�
 2. ファイルとして読み込めた場合、その内容をスライドの元ネタとして使う
 3. ファイルでない場合は、引数のテキスト自体をスライドのテーマや指示として扱う
 
-### ステップ2: ユーザーへの確認
+### ステップ2: スタイルプレビュー（Show, Don't Tell）
+
+ユーザーにデザインの好みを言葉で聞くのではなく、視覚的に選ばせる。
+
+1. 入力内容からタイトルスライド1枚分のミニHTMLを3パターン生成する（各パターンはカラーパレット違い）
+   - パターンA: デフォルトのグリーン系（--accent: #2D6A4F）
+   - パターンB: モノクローム系（--accent: #333333）
+   - パターンC: ウォーム系（--accent: #8B4513）
+2. 3ファイルをWriteツールで一時出力し、ユーザーに「ブラウザで開いて好みを選んでください」と伝える
+3. ユーザーが選んだパレットで本番生成に進む
+
+ユーザーが「プレビュー不要」「デフォルトで」と言った場合はスキップしてよい。
+
+### ステップ3: ユーザーへの確認
 
 AskUserQuestionツールで以下を確認する。一度に聞きすぎず、2〜3問に絞る。
 
 聞くべきこと：
 - 出力先のファイルパス（デフォルト: 作業ディレクトリ/slides/presentation.html）
-- カラーパレットの変更希望があるか（デフォルトのグリーン系でよいか）
 - スライド枚数の目安（指定がなければ内容に応じて自動判断）
+- PDF出力も必要か（デフォルト: 不要）
 
-### ステップ3: スライド構成の設計
+### ステップ4: スライド構成の設計
 
 内容を分析し、スライド構成を決める。以下の原則に従う。
 
@@ -42,9 +55,28 @@ AskUserQuestionツールで以下を確認する。一度に聞きすぎず、2�
 - テキスト量が多い場合は積極的に分割する
 - コードやプロンプトは専用のダークブロックスライドにする
 
-### ステップ4: HTML生成
+コンテンツ密度の上限（厳守）：
+- 箇条書き: 1スライドあたり最大5項目
+- グリッドカード: 1スライドあたり最大6枚
+- 本文テキスト: 1スライドあたり最大4段落（各段落2〜3行以内）
+- タイトルスライド: 見出し1つ + サブタイトル1行のみ
+
+### ステップ5: HTML生成
 
 以下のデザインシステムに厳密に従ってHTMLファイルを生成する。Writeツールで出力する。
+
+### ステップ6: PDF出力（任意）
+
+ユーザーがPDF出力を希望した場合、DeckTapeで変換する。
+
+```bash
+npx decktape reveal --size 1280x720 "file://${PWD}/出力ファイル.html" 出力ファイル.pdf
+```
+
+Chromeのパスが必要な場合は `--chrome-path` オプションを付ける。macOSの場合：
+```bash
+--chrome-path "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+```
 
 ## デザインシステム（厳守）
 
@@ -72,10 +104,10 @@ AskUserQuestionツールで以下を確認する。一度に聞きすぎず、2�
 
 - 日本語テキスト: Noto Sans JP
 - 英語ラベル・数字: Inter
-- スライドタイトル（h1）: font-weight 900, font-size 3.2em, letter-spacing -0.02em
-- セクションタイトル（h2）: font-weight 900, font-size 2.4em
-- 小見出し（h3）: font-weight 700, font-size 1.6em
-- 本文: font-weight 400, font-size 0.95em, line-height 1.6
+- スライドタイトル（h1）: font-weight 900, clamp(2em, 5vw, 3.2em), letter-spacing -0.02em
+- セクションタイトル（h2）: font-weight 900, clamp(1.6em, 4vw, 2.4em)
+- 小見出し（h3）: font-weight 700, clamp(1.2em, 3vw, 1.6em)
+- 本文: font-weight 400, clamp(0.75em, 1.5vw, 0.95em), line-height 1.6
 - ベースフォントサイズ: 28px
 
 ### レイアウトの原則
@@ -86,6 +118,7 @@ AskUserQuestionツールで以下を確認する。一度に聞きすぎず、2�
 - グラデーション、ドロップシャドウ、角丸は使わない
 - セクションのパディング: padding: 40px 60px
 - カード間のギャップ: 48px
+- 各スライドは必ずビューポート内に収める（はみ出し厳禁）
 
 ### スライドタイプ別のCSS
 
@@ -120,7 +153,9 @@ AskUserQuestionツールで以下を確認する。一度に聞きすぎず、2�
 .reveal .slides section {
   padding: 40px 60px;
   box-sizing: border-box;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex !important;
   flex-direction: column;
   justify-content: center;
@@ -136,14 +171,14 @@ AskUserQuestionツールで以下を確認する。一度に聞きすぎず、2�
   text-align: left;
 }
 
-.reveal h1 { font-weight: 900; font-size: 3.2em; }
-.reveal h2 { font-weight: 900; font-size: 2.4em; }
-.reveal h3 { font-weight: 700; font-size: 1.6em; }
+.reveal h1 { font-weight: 900; font-size: clamp(2em, 5vw, 3.2em); }
+.reveal h2 { font-weight: 900; font-size: clamp(1.6em, 4vw, 2.4em); }
+.reveal h3 { font-weight: 700; font-size: clamp(1.2em, 3vw, 1.6em); }
 
 .reveal p {
   line-height: 1.6;
   margin-bottom: 0.6em;
-  font-size: 0.95em;
+  font-size: clamp(0.75em, 1.5vw, 0.95em);
 }
 
 /* アクセント */
@@ -301,6 +336,32 @@ AskUserQuestionツールで以下を確認する。一度に聞きすぎず、2�
   color: var(--accent);
   font-weight: 700;
 }
+
+/* アクセシビリティ: モーション低減対応 */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slides section {
+    transition: none !important;
+  }
+  .reveal .slide-background {
+    transition: none !important;
+  }
+}
+
+/* レスポンシブ: 高さが低い画面への対応 */
+@media (max-height: 700px) {
+  .reveal { font-size: 24px; }
+  .reveal .slides section { padding: 28px 40px; }
+}
+
+@media (max-height: 600px) {
+  .reveal { font-size: 20px; }
+  .reveal .slides section { padding: 20px 32px; }
+}
+
+@media (max-height: 500px) {
+  .reveal { font-size: 16px; }
+  .reveal .slides section { padding: 16px 24px; }
+}
 ```
 
 ### HTMLテンプレート構造
@@ -420,6 +481,9 @@ AskUserQuestionツールで以下を確認する。一度に聞きすぎず、2�
 - 紫系、ピンク系の配色を使わない（AI臭くなる）
 - 全スライド中央寄せにしない
 - 小さいフォントサイズ（0.7em未満）を本文に使わない
+- 1スライドに箇条書き6項目以上を詰め込まない
+- 1スライドにグリッドカード7枚以上を配置しない
+- スクロールが必要になる量のコンテンツを入れない
 
 ## 出力の制約
 
